@@ -1,0 +1,47 @@
+{% extends "base.html" %} {% block title %}Weather Data{% endblock %} {% block
+content %}
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-10">
+      <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+          <h4 class="mb-0">Singapore Temperature Data</h4>
+          <small class="text-white"
+            >Last updated: {{ timestamp | datetimeformat }}</small
+          >
+        </div>
+
+        <div class="card-body">
+          <div class="row row-cols-1 row-cols-md-2 g-4">
+            {% for station in stations %}
+            <div class="col">
+              <div class="card h-100">
+                <div class="card-body">
+                  <h5 class="card-title">
+                    <i class="bi bi-thermometer-sun"></i>
+                    {{ station.name }}
+                  </h5>
+                  <p class="display-6">{{ station.temperature }}°C</p>
+                  <div class="text-muted">
+                    <small>
+                      Coordinates: {{ "%.4f"|format(station.location.latitude)
+                      }}, {{ "%.4f"|format(station.location.longitude) }}
+                    </small>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="card-footer text-center">
+          <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Dashboard
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

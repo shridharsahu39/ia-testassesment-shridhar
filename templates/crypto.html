@@ -1,0 +1,235 @@
+{% extends "base.html" %} {% block title %}Crypto Tracker{% endblock %} {% block
+content %}
+<div class="container mt-5">
+  <div class="card shadow">
+    <div class="card-header bg-primary text-white">
+      <h4 class="mb-0">Cryptocurrency Tracker</h4>
+      <div class="input-group mt-3">
+        <input
+          type="text"
+          id="searchInput"
+          class="form-control"
+          placeholder="Search coins..."
+        />
+        <button class="btn btn-light" onclick="loadCoins()">
+          <i class="bi bi-search"></i>
+        </button>
+      </div>
+    </div>
+
+    <div class="card-body">
+      <!-- Coin List -->
+      <div id="coinList" class="row row-cols-1 row-cols-md-3 g-4 mb-4"></div>
+
+      <!-- Pagination -->
+      <nav>
+        <ul class="pagination justify-content-center">
+          <li class="page-item">
+            <a class="page-link" href="#" onclick="previousPage()">Previous</a>
+          </li>
+          <li class="page-item">
+            <span class="page-link" id="currentPage">1</span>
+          </li>
+          <li class="page-item">
+            <a class="page-link" href="#" onclick="nextPage()">Next</a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  </div>
+</div>
+
+<!-- Coin Details Modal -->
+<div class="modal fade" id="coinModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="coinSymbol"></h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <div class="row mb-4">
+          <div class="col-md-6">
+            <p class="h4" id="lastPrice"></p>
+            <p id="priceChange"></p>
+            <div class="row">
+              <div class="col-6">
+                <p class="text-success" id="highPrice"></p>
+              </div>
+              <div class="col-6">
+                <p class="text-danger" id="lowPrice"></p>
+              </div>
+            </div>
+            <p>Volume: <span id="volume"></span></p>
+          </div>
+          <div class="col-md-6">
+            <canvas id="priceChart"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+
+<script>
+  let currentPage = 1;
+  let chart = null;
+
+  function loadCoins(page = 1) {
+    const search = document.getElementById("searchInput").value;
+    fetch(`/get_coins?page=${page}&search=${search}`)
+      .then((response) => response.json())
+      .then((data) => {
+        currentPage = data.current_page;
+        document.getElementById("currentPage").textContent = currentPage;
+
+        const coinList = document.getElementById("coinList");
+        coinList.innerHTML = data.coins
+          .map(
+            (coin) => `
+                <div class="col">
+                    <div class="card h-100 coin-card" style="cursor: pointer" onclick="showCoinDetails('${
+                      coin.symbol
+                    }')">
+                        <div class="card-body">
+                            <h5 class="card-title">${coin.symbol}</h5>
+                            <p class="card-text">$${parseFloat(
+                              coin.weightedAvgPrice
+                            ).toFixed(4)}</p>
+                            <span class="badge ${
+                              coin.priceChangePercent >= 0
+                                ? "bg-success"
+                                : "bg-danger"
+                            }">
+                                ${parseFloat(coin.priceChangePercent).toFixed(
+                                  2
+                                )}%
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            `
+          )
+          .join("");
+      });
+  }
+
+  async function showCoinDetails(symbol) {
+    try {
+      // Clear existing chart
+      if (chart) chart.destroy();
+
+      // Fetch basic details
+      const detailsResponse = await fetch(`/get_coin_details/${symbol}`);
+      if (!detailsResponse.ok) throw new Error("Failed to load details");
+      const data = await detailsResponse.json();
+
+      // Fetch historical data
+      const historyResponse = await fetch(`/get_coin_history/${symbol}`);
+      if (!historyResponse.ok) throw new Error("Failed to load history");
+      const history = await historyResponse.json();
+
+      // Process history data
+      const labels = history.map((entry) =>
+        new Date(entry.time).toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      );
+      const prices = history.map((entry) => entry.close);
+
+      // Update DOM elements
+      document.getElementById("coinSymbol").textContent = data.symbol;
+      document.getElementById(
+        "lastPrice"
+      ).textContent = `$${data.lastPrice.toFixed(4)}`;
+      document.getElementById("priceChange").innerHTML = `
+            <span class="${
+              data.priceChangePercent >= 0 ? "text-success" : "text-danger"
+            }">
+                ${data.priceChangePercent >= 0 ? "▲" : "▼"} 
+                ${data.priceChange.toFixed(
+                  4
+                )} (${data.priceChangePercent.toFixed(2)}%)
+            </span>
+        `;
+      document.getElementById(
+        "highPrice"
+      ).textContent = `High: $${data.highPrice.toFixed(4)}`;
+      document.getElementById(
+        "lowPrice"
+      ).textContent = `Low: $${data.lowPrice.toFixed(4)}`;
+      document.getElementById("volume").textContent = data.volume.toFixed(2);
+
+      // Create chart
+      const ctx = document.getElementById("priceChart").getContext("2d");
+      chart = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: "Price",
+              data: prices,
+              borderColor: "#007bff",
+              tension: 0.1,
+              fill: false,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+          },
+          scales: {
+            x: {
+              ticks: {
+                autoSkip: true,
+                maxTicksLimit: 10,
+              },
+            },
+            y: {
+              title: {
+                display: true,
+                text: "Price (Pair Currency)",
+                color: "#666",
+              },
+            },
+          },
+        },
+      });
+
+      // Show modal
+      new bootstrap.Modal(document.getElementById("coinModal")).show();
+    } catch (error) {
+      console.error("Error:", error);
+      alert("Failed to load coin data. Please try again.");
+    }
+  }
+
+  function nextPage() {
+    loadCoins(currentPage + 1);
+  }
+
+  function previousPage() {
+    if (currentPage > 1) loadCoins(currentPage - 1);
+  }
+
+  // Initial load
+  loadCoins();
+</script>
+{% endblock %}

@@ -1,0 +1,76 @@
+{% extends "base.html" %} {% block title %}Dashboard{% endblock %} {% block
+content %}
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <div class="card shadow">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="mb-0">Profile Dashboard</h2>
+            <a href="{{ url_for('edit_profile') }}" class="btn btn-primary">
+              <i class="bi bi-pencil-square"></i> Edit Profile
+            </a>
+          </div>
+
+          <div class="row">
+            <!-- Profile Picture Section -->
+            <div class="col-md-4 text-center">
+              <div class="mb-4">
+                <img
+                  src="{% if user.photo %}{% if user.photo.startswith('http') %}{{ user.photo }}{% else %}/static/{{ user.photo }}{% endif %}{% else %}/static/default-avatar.jpg{% endif %}"
+                  class="img-thumbnail"
+                  alt="Profile Picture"
+                  style="width: 200px; height: 200px; object-fit: cover"
+                />
+              </div>
+              <h3 class="mb-3">{{ user.name }}</h3>
+            </div>
+
+            <!-- Profile Details Section -->
+            <div class="col-md-8">
+              <div class="card mb-3">
+                <div class="card-body">
+                  <h5 class="card-title">
+                    <i class="bi bi-envelope"></i> Email
+                  </h5>
+                  <p class="card-text">{{ user.email }}</p>
+                </div>
+              </div>
+
+              <div class="card mb-3">
+                <div class="card-body">
+                  <h5 class="card-title">
+                    <i class="bi bi-telephone"></i> Phone
+                  </h5>
+                  <p class="card-text">
+                    {{ user.phone if user.phone else 'Not provided' }}
+                  </p>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card-body">
+                  <h5 class="card-title">
+                    <i class="bi bi-person-badge"></i> Bio
+                  </h5>
+                  <p class="card-text">
+                    {{ user.bio if user.bio else 'No bio available' }}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="mt-4" style="margin-left: 230px">
+    <a href="{{ url_for('weather') }}" class="btn btn-info">
+      <i class="bi bi-cloud-sun"></i> Check Singapore Temperatures
+    </a>
+    <a href="{{ url_for('crypto') }}" class="btn btn-warning">
+      <i class="bi bi-currency-bitcoin"></i> View Cryptocurrencies
+    </a>
+  </div>
+</div>
+{% endblock %}
